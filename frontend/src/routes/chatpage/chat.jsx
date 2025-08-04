@@ -5,21 +5,27 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import Markdown from 'react-markdown';
 import { IKImage } from 'imagekitio-react';
+import { useUser } from "../../lib/UserContext";
 
 const Chat = () => {
   const { id } = useParams();
   const chatId = Number(id); // Convert to number
   const wrapperRef = useRef(null);
+  const { user } = useUser();
 
   const { isPending, error, data } = useQuery({
     queryKey: ["chat", chatId],
-    queryFn: () =>
-      fetch(`${import.meta.env.VITE_API_URL}/api/chat/${chatId}`, {
+    queryFn: async () => {
+      const { data: { session } } = await window.supabase.auth.getSession();
+      const token = session?.access_token;
+      return fetch(`${import.meta.env.VITE_API_URL}/api/chat/${chatId}`, {
         credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       }).then((res) => {
         if (!res.ok) throw new Error("Failed to fetch chat");
         return res.json();
-      }),
+      });
+    },
   });
 
   useEffect(() => {

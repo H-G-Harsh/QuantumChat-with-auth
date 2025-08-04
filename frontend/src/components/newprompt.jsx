@@ -6,6 +6,7 @@ import model from "./../lib/gemini";
 import Markdown from "react-markdown";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Suggestions from "./../routes/chatpage/suggestions";
+import { useUser } from "../lib/UserContext";
 
 const Newprompt = ({ data }) => {
   const [question, setQuestion] = useState("");
@@ -40,12 +41,15 @@ const chat = model.startChat({
 
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
+      const { data: { session } } = await window.supabase.auth.getSession();
+      const token = session?.access_token;
       return fetch(`${import.meta.env.VITE_API_URL}/api/chats/${data._id}`, {
         method: "PUT",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
+          ...(token && { "Authorization": `Bearer ${token}` })
         },
         body: JSON.stringify({
           question: question.length ? question : undefined,

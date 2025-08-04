@@ -1,14 +1,20 @@
 import './chatlist.css';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useUser } from "../lib/UserContext";
 
 const Chatlist = ({ onLinkClick }) => {
+  const { user } = useUser();
   const { isPending, error, data } = useQuery({
     queryKey: ['userChats'],
-    queryFn: () =>
-      fetch(`${import.meta.env.VITE_API_URL}/api/userchats`, {
+    queryFn: async () => {
+      const { data: { session } } = await window.supabase.auth.getSession();
+      const token = session?.access_token;
+      return fetch(`${import.meta.env.VITE_API_URL}/api/userchats`, {
         credentials: "include",
-      }).then((res) => res.json()),
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      }).then((res) => res.json());
+    },
   });
 
   console.log("userChats data:", data); // Debug output

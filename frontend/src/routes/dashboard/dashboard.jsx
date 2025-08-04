@@ -60,14 +60,18 @@ import { useNavigate } from 'react-router-dom';
 const Dashboard = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { user } = useUser();
 
   const mutation = useMutation({
-    mutationFn: (text) => {
+    mutationFn: async (text) => {
+      const { data: { session } } = await window.supabase.auth.getSession();
+      const token = session?.access_token;
       return fetch(`${import.meta.env.VITE_API_URL}/api/chats`, {
         method: "POST",
         credentials: "include",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          ...(token && { "Authorization": `Bearer ${token}` })
         },
         body: JSON.stringify({ text }),
       }).then((res) => res.json());
@@ -85,6 +89,20 @@ const Dashboard = () => {
     if (!text) return;
     mutation.mutate(text);
   };
+
+  useEffect(() => {
+    if (!loading && user) {
+      (async () => {
+        const { data: { session } } = await window.supabase.auth.getSession();
+        const token = session?.access_token;
+        axios.get(`/api/userchats`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        })
+          .then(res => setChats(res.data))
+          .catch(err => console.error(err));
+      })();
+    }
+  }, [user, loading]);
 
   return (
     <div className='dashboard'>

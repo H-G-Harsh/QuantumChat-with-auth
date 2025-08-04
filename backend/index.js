@@ -51,10 +51,28 @@ app.get("/api/upload", (req, res) => {
   res.send(result);
 });
 
-// Unprotected routes (previously Clerk protected)
-app.post("/api/chats", async (req, res) => {
-  // const userId = req.auth.userId;
-  const { userId, text } = req.body;
+// Supabase JWT verification middleware
+import jwt from "jsonwebtoken";
+
+function verifySupabaseJWT(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing or invalid Authorization header" });
+  }
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, process.env.SUPABASE_JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+}
+
+// Protected routes (Supabase auth required)
+app.post("/api/chats", verifySupabaseJWT, async (req, res) => {
+  const { text } = req.body;
+  const userId = req.user.sub;
 
   try {
     const newChat = new chat({
@@ -85,9 +103,8 @@ app.post("/api/chats", async (req, res) => {
   }
 });
 
-app.get("/api/userchats", async (req, res) => {
-  // const userId = req.auth.userId;
-  const { userId } = req.query;
+app.get("/api/userchats", verifySupabaseJWT, async (req, res) => {
+  const userId = req.user.sub;
   try {
     const userChats = await userchat.findOne({ userId });
     res.status(200).send(userChats?.chats || []);
@@ -97,9 +114,8 @@ app.get("/api/userchats", async (req, res) => {
   }
 });
 
-app.get("/api/chat/:id", async (req, res) => {
-  // const userId = req.auth.userId;
-  const { userId } = req.query;
+app.get("/api/chat/:id", verifySupabaseJWT, async (req, res) => {
+  const userId = req.user.sub;
   try {
     const chatData = await chat.findOne({ _id: req.params.id, userId });
     res.status(200).send(chatData);
@@ -109,9 +125,9 @@ app.get("/api/chat/:id", async (req, res) => {
   }
 });
 
-app.put("/api/chats/:id", async (req, res) => {
-  // const userId = req.auth.userId;
-  const { userId, question, answer, img } = req.body;
+app.put("/api/chats/:id", verifySupabaseJWT, async (req, res) => {
+  const userId = req.user.sub;
+  const { question, answer, img } = req.body;
 
   const newItems = [
     ...(question ? [{ role: "user", parts: [{ text: question }], ...(img && { img }) }] : []),
