@@ -2,7 +2,7 @@ import express from "express";
 import ImageKit from "imagekit";
 import cors from "cors";
 import path from "path";
-import { fileURLToPath } from "url";
+// Remove: import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 // Removed Clerk import
 
@@ -12,8 +12,10 @@ import { generateChatResponse } from './utils/chatHelper.js';
 
 const port = process.env.PORT || 3000;
 const app = express();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Remove: const __filename = fileURLToPath(import.meta.url);
+// Replace with:
+const __dirname = path.resolve();
+const __filename = path.dirname(__filename);
 
 // Middlewares
 app.use(cors({
